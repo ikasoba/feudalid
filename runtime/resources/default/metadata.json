@@ -1,0 +1,7 @@
+{
+  "name": "feudalid - Default Resources",
+  "format_version": [ 0, 0, 1 ],
+  "namespaces": {
+    "feudalid": "./feudalid/"
+  }
+}
