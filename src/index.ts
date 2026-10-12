@@ -26,6 +26,7 @@ globalThis.addEventListener("load", () => {
       fov: 75,
       width,
       height,
+      domElement: renderer.domElement,
       render: renderer.render.bind(renderer),
       mouse: null!
     });

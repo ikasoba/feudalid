@@ -1,10 +1,16 @@
 import {  effect, signal, type ReadonlySignal } from "@preact/signals-core";
 import { BufferAttribute, BufferGeometry, Mesh, MeshPhongMaterial, PerspectiveCamera, PointLight, Scene, type Camera } from "three";
 import cubeURL from "../runtime/resources/default/feudalid/models/generic/block/model.gltf?url";
+import headURL from "../runtime/resources/default/feudalid/models/head/humanoid/model.gltf?url";
+import earURL from "../runtime/resources/default/feudalid/models/ear/humanoid/model.gltf?url";
+import earElfyURL from "../runtime/resources/default/feudalid/models/ear/elfy/model.gltf?url";
+import bodyURL from "../runtime/resources/default/feudalid/models/body/humanoid/model.gltf?url";
 import { GLTFLoader } from "three/examples/jsm/Addons.js";
 import { Noise } from "../lib/noise.ts";
+import { buildCharacterModel } from "./model.ts";
 
 export interface AppProps {
+  domElement:HTMLElement;
   render: (scene: Scene, camera: Camera) => void;
   fov: number;
   width: number;
@@ -80,9 +86,33 @@ export function App({ render, fov, width, height }: AppProps) {
   const scene = new Scene();
   const camera = new PerspectiveCamera(fov, width / height);
   const gltfLoader = new GLTFLoader();
-  const modelSignal = useAsync(() => gltfLoader.loadAsync(cubeURL));
+  const modelAssetsSignal = useAsync(async () => {
+    return {
+      head: await gltfLoader.loadAsync(headURL),
+      ear: await gltfLoader.loadAsync(earURL),
+      earElfy: await gltfLoader.loadAsync(earElfyURL),
+      body: await gltfLoader.loadAsync(bodyURL)
+    } 
+  });
 
-  camera.position.z = 32;
+  const material = new MeshPhongMaterial({ color: 0x888888 });
+
+  effect(() => {
+    if (modelAssetsSignal.value == null) return;
+
+    const modelAssets = modelAssetsSignal.value;
+
+    const human = buildCharacterModel({
+      head: modelAssets.head.scene,
+      ear: modelAssets.earElfy.scene,
+      body: modelAssets.body.scene
+    });
+
+    scene.add(human);
+  });
+
+  camera.position.z = 2;
+  camera.position.y = 0.25;
 
   effect(() => {
     let isCanceled = false;
@@ -101,45 +131,43 @@ export function App({ render, fov, width, height }: AppProps) {
     return () => isCanceled = true;
   });
 
-  const material = new MeshPhongMaterial({ color: 0x888888 });
 
-  effect(() => {
-    if (modelSignal.value == null) return;
+  // effect(() => {
+  //   let noisemap = makeNoise(0, 0, 32, null);
+  //   let vertices = makeVertices(32, noisemap, null);
 
-    let noisemap = makeNoise(0, 0, 32, null);
-    let vertices = makeVertices(32, noisemap, null);
+  //   const geom = new BufferGeometry();
 
-    const geom = new BufferGeometry();
+  //   geom.setAttribute("position", new BufferAttribute(vertices, 3));
 
-    geom.setAttribute("position", new BufferAttribute(vertices, 3));
+  //   let isCancelled = false;
+  //   let t = 0;
+  //   const f = () => setTimeout(() => {
+  //     if (isCancelled) return;
 
-    let isCancelled = false;
-    let t = 0;
-    const f = () => setTimeout(() => {
-      if (isCancelled) return;
+  //     t += 1;
 
-      t += 1;
+  //     noisemap = makeNoise(t, t, 32, noisemap);
+  //     vertices = makeVertices(32, noisemap, vertices);
 
-      noisemap = makeNoise(t, t, 32, noisemap);
-      vertices = makeVertices(32, noisemap, vertices);
+  //     geom.setAttribute("position", new BufferAttribute(vertices, 3));
 
-      geom.setAttribute("position", new BufferAttribute(vertices, 3));
+  //     f();
+  //   }, 16);
+  //   f();
 
-      f();
-    }, 16);
-    f();
+  //   const terrain = new Mesh(geom, material);
 
-    const terrain = new Mesh(geom, material);
+  //   terrain.rotateX(Math.PI * 45 / 180);
 
-    terrain.rotateX(Math.PI * 45 / 180);
+  //   scene.add(terrain);
 
-    scene.add(terrain);
+  //   return () => isCancelled = true;
+  // })
+  const light = new PointLight(0xFFFFFF, 39, 0, 0);
 
-    return () => isCancelled = true;
-  })
-  const light = new PointLight(0xFFFFFF, 25, 0, 1.5);
-
-  light.position.y = 15;
+  light.position.y = 10;
+  light.position.z = 5;
 
   scene.add(light);
 
